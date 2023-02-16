@@ -1,9 +1,39 @@
-//import cv, { Mat, Point } from 'opencv-ts';
+function waitForOpencv(callbackFn, waitTimeMs = 30000, stepTimeMs = 100) {
+    if (cv.Mat) callbackFn(true)
+
+    let timeSpentMs = 0
+    const interval = setInterval(() => {
+        const limitReached = timeSpentMs > waitTimeMs
+        if (cv.Mat || limitReached) {
+            clearInterval(interval)
+            return callbackFn(!limitReached)
+        } else {
+            timeSpentMs += stepTimeMs
+        }
+    }, stepTimeMs)
+}
+
 
 self.onmessage = (event) => {
-    /* eslint-disable-next-line no-restricted-globals */
+    self.importScripts('./opencv.js');
+    waitForOpencv(success => {
+        //self.postMessage(success);
+        const img = cv.matFromImageData(event.data);
+        const dst = new cv.Mat();
+
+        cv.cvtColor(img, dst, cv.COLOR_BGR2RGB, 4)
+        console.log(dst.channel);
+
+        const imgData = new ImageData(
+            new Uint8ClampedArray(dst.data),
+            dst.cols,
+            dst.rows
+        );
+        img.delete();
+        dst.delete();
+        self.postMessage(imgData);
+    });
     console.log(event);
-    self.postMessage('received:' + event.data);
 }
 
 
